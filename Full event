@@ -1,0 +1,144 @@
+package com.example.kafka.event;
+
+import java.time.Instant;
+
+public class UserCreatedEvent {
+
+    private String userId;
+    private String email;
+    private String name;
+    private Instant createdAt;
+
+    // Default constructor (required for deserialization)
+    public UserCreatedEvent() {
+    }
+
+    // All-args constructor
+    public UserCreatedEvent(String userId, String email, String name, Instant createdAt) {
+        this.userId = userId;
+        this.email = email;
+        this.name = name;
+        this.createdAt = createdAt;
+    }
+
+    // Getters and setters
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    @Override
+    public String toString() {
+        return "UserCreatedEvent{" +
+                "userId='" + userId + '\'' +
+                ", email='" + email + '\'' +
+                ", name='" + name + '\'' +
+                ", createdAt=" + createdAt +
+                '}';
+    }
+
+
+
+}
+
+
+import com.example.kafka.event.UserCreatedEvent;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserEventProducer {
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    public UserEventProducer(KafkaTemplate<String, Object> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    public void publishUserCreatedEvent(UserCreatedEvent event) {
+        String topic = "user-events"; // Make sure this topic exists
+        kafkaTemplate.send(topic, event.getUserId(), event);
+        System.out.println("Published event: " + event);
+    }
+}
+
+import com.example.kafka.event.UserCreatedEvent;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.Instant;
+
+@RestController
+@RequestMapping("/users")
+public class UserController {
+
+    private final UserEventProducer producer;
+
+    public UserController(UserEventProducer producer) {
+        this.producer = producer;
+    }
+
+    @PostMapping("/create")
+    public String createUser(@RequestBody UserCreatedEvent event) {
+        event.setCreatedAt(Instant.now());
+        producer.publishUserCreatedEvent(event);
+        return "User event published.";
+    }
+}
+
+import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringSerializer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.support.serializer.JsonSerializer;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Configuration
+public class KafkaProducerConfig {
+
+    @Bean
+    public ProducerFactory<String, Object> producerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
+        return new DefaultKafkaProducerFactory<>(configProps);
+    }
+
+    @Bean
+    public KafkaTemplate<String, Object> kafkaTemplate() {
+        return new KafkaTemplate<>(producerFactory());
+    }
+}
+
