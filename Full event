@@ -141,4 +141,62 @@ public class KafkaProducerConfig {
         return new KafkaTemplate<>(producerFactory());
     }
 }
+******************
+
+KafkaTemplate itself does not "know" the topic configuration details like number of partitions or replication factor. 
+It simply sends messages to a specified topic by name.
+
+Here's what you need to know:
+
+
+---
+
+1. KafkaTemplate’s Responsibility
+
+It publishes messages to a topic.
+
+It does not manage or validate topic existence or configuration.
+
+It expects the topic to already exist (created manually or via NewTopic bean).
+
+
+
+---
+
+2. Topic Creation Responsibility
+
+You handle topic creation in your configuration class, e.g.:
+
+@Bean
+public NewTopic userEventsTopic() {
+    return new NewTopic("user-events", 3, (short) 1);
+}
+
+This ensures the topic exists before KafkaTemplate.send(...) is called.
+
+
+---
+
+3. What Happens If Topic Doesn’t Exist?
+
+Kafka (by default) can auto-create the topic if enabled (auto.create.topics.enable=true) but with default settings, which may not
+match what you need.
+
+In production, it's recommended to explicitly declare topics with NewTopic so you can control partitioning, replication, etc.
+
+
+
+---
+
+Best Practice Summary
+
+Task	Who Handles It
+
+Topic creation	KafkaAdmin + NewTopic in config
+Message publishing	KafkaTemplate
+Topic configuration	Set during NewTopic(...) bean creation
+
+
+
+---
 
