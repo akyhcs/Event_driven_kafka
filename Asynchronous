@@ -1,0 +1,25 @@
+ListenableFuture<SendResult<String, Object>> future = kafkaTemplate.send("my-topic", key, value);
+
+future.addCallback(new ListenableFutureCallback<>() {
+    @Override
+    public void onSuccess(SendResult<String, Object> result) {
+        System.out.println("Message sent successfully");
+    }
+
+    @Override
+    public void onFailure(Throwable ex) {
+        System.err.println("Message failed: " + ex.getMessage());
+    }
+});
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+CompletableFuture<SendResult<String, Object>> future =
+        kafkaTemplate.send("my-topic", key, value).completable();
+
+future.thenAccept(result ->
+        System.out.println("Sent: " + result.getRecordMetadata())
+).exceptionally(ex -> {
+        System.err.println("Send failed: " + ex.getMessage());
+        return null;
+});
