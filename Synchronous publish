@@ -1,0 +1,27 @@
+import com.example.kafka.event.UserCreatedEvent;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
+import org.springframework.stereotype.Service;
+
+@Service
+public class UserEventProducer {
+
+    private final KafkaTemplate<String, Object> kafkaTemplate;
+
+    public UserEventProducer(KafkaTemplate<String, Object> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    public void publishUserCreatedEvent(UserCreatedEvent event) {
+        String topic = "user-events";
+        try {
+            SendResult<String, Object> result = kafkaTemplate
+                    .send(topic, event.getUserId(), event)
+                    .get(); // <-- This makes it synchronous
+            System.out.println("Message sent successfully: " + result.getRecordMetadata());
+        } catch (Exception e) {
+            System.err.println("Failed to send message: " + e.getMessage());
+            // You can log, rethrow or handle retries here
+        }
+    }
+}
