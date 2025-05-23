@@ -1,4 +1,5 @@
-In the context of Apache Kafka, a "Kafka handler" typically refers to a component or class in your application code that is responsible for handling Kafka messages—either consuming (reading) or producing (sending) messages to/from Kafka topics.
+In the context of Apache Kafka, a "Kafka handler" typically refers to a component or class in your application code that is responsible for handling Kafka messages—either consuming (reading)
+or producing (sending) messages to/from Kafka topics.
 
 Depending on usage, a Kafka handler can be:
 
