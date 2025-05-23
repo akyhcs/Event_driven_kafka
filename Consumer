@@ -1,0 +1,58 @@
+Here's a basic example of a Kafka consumer in Spring Boot using KafkaConsumer and annotations:
+
+1. Add Maven Dependency
+
+If you're using Maven, include the following in your pom.xml:
+
+<dependency>
+    <groupId>org.springframework.kafka</groupId>
+    <artifactId>spring-kafka</artifactId>
+</dependency>
+
+
+---
+
+2. application.properties
+
+spring.kafka.bootstrap-servers=localhost:9092
+spring.kafka.consumer.group-id=my-group
+spring.kafka.consumer.auto-offset-reset=earliest
+spring.kafka.consumer.key-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.value-deserializer=org.apache.kafka.common.serialization.StringDeserializer
+
+
+---
+
+3. Consumer Listener
+
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Service;
+
+@Service
+public class KafkaConsumerService {
+
+    @KafkaListener(topics = "my-topic", groupId = "my-group")
+    public void consume(String message) {
+        System.out.println("Received message: " + message);
+    }
+}
+
+
+---
+
+4. Enable Kafka in Main Application
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.kafka.annotation.EnableKafka;
+
+@SpringBootApplication
+@EnableKafka
+public class KafkaConsumerApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(KafkaConsumerApplication.class, args);
+    }
+}
+
+Let me know if you want the consumer to handle JSON objects or want to manually poll messages.
+
