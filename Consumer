@@ -1,4 +1,4 @@
-Here's a basic example of a Kafka consumer in Spring Boot using KafkaConsumer and annotations:
+
 
 1. Add Maven Dependency
 
