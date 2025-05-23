@@ -1,0 +1,45 @@
+In Kafka, idempotent producers ensure that duplicate messages are not written to a topic due to retries. This is useful in preventing data duplication, especially during transient network failures or broker errors.
+
+Enabling Idempotent Producer in Spring Boot Kafka
+
+To enable idempotence in a Kafka producer using Spring Boot, you need to set the enable.idempotence property to true.
+
+Example Configuration (Java Config):
+
+@Configuration
+public class KafkaProducerConfig {
+
+    @Bean
+    public ProducerFactory<String, String> producerFactory() {
+        Map<String, Object> configProps = new HashMap<>();
+        configProps.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+        configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+
+        // Enable idempotence
+        configProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
+        
+        return new DefaultKafkaProducerFactory<>(configProps);
+    }
+
+    @Bean
+    public KafkaTemplate<String, String> kafkaTemplate() {
+        return new KafkaTemplate<>(producerFactory());
+    }
+}
+
+Key Notes:
+
+When enable.idempotence=true:
+
+Kafka assigns a Producer ID.
+
+The producer tracks sequence numbers per partition to prevent duplicates.
+
+Retries are safe, even with acks=all.
+
+
+Required for exactly-once semantics (EOS) but not sufficient on its own. EOS also needs transaction support.
+
+
+Let me know if you need idempotence with transactions or how to configure it for a specific use case.
