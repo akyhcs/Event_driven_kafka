@@ -1,0 +1,47 @@
+In Apache Kafka, handling deserialization errors in consumers is important to prevent the consumer from crashing when it receives corrupted or unexpected data. You can configure error handling deserializers using the built-in ErrorHandlingDeserializer class provided by Spring Kafka or Kafka itself.
+
+Using Spring Kafka (Recommended in Spring Boot apps)
+
+1. Add to application.properties:
+
+spring.kafka.consumer.key-deserializer=org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+spring.kafka.consumer.value-deserializer=org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+
+spring.kafka.consumer.properties.spring.deserializer.key.delegate.class=org.apache.kafka.common.serialization.StringDeserializer
+spring.kafka.consumer.properties.spring.deserializer.value.delegate.class=org.springframework.kafka.support.serializer.JsonDeserializer
+
+# Optionally configure trusted packages
+spring.kafka.consumer.properties.spring.json.trusted.packages=*
+
+2. Configure JSON Deserializer (if using JSON):
+
+If you use JSON deserialization, also register the target class:
+
+@Bean
+public ConsumerFactory<String, YourMessageType> consumerFactory() {
+    JsonDeserializer<YourMessageType> deserializer = new JsonDeserializer<>(YourMessageType.class);
+    deserializer.setRemoveTypeHeaders(false);
+    deserializer.addTrustedPackages("*");
+    deserializer.setUseTypeMapperForKey(true);
+
+    return new DefaultKafkaConsumerFactory<>(consumerProps(),
+            new ErrorHandlingDeserializer<>(new StringDeserializer()),
+            new ErrorHandlingDeserializer<>(deserializer));
+}
+
+Error Handling Behavior
+
+When deserialization fails, ErrorHandlingDeserializer catches the exception and returns a null record. You can handle it in your listener method like this:
+
+@KafkaListener(topics = "your-topic")
+public void listen(@Payload(required = false) YourMessageType message,
+                   @Header(KafkaHeaders.RECEIVED_MESSAGE_KEY) String key) {
+    if (message == null) {
+        // handle deserialization error (e.g., log it or skip)
+        System.err.println("Deserialization error for key: " + key);
+        return;
+    }
+    // process message
+}
+
+
