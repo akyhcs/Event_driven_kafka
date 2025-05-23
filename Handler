@@ -44,3 +44,53 @@ In broader terms, any logic you write to handle Kafka interactions—like error 
 
 If you saw this term in a specific context (e.g., a log message, framework, or library), feel free to share and I can give a more precise explanation.
 
+No, there is no standard annotation named @KafkaHandler in Apache Kafka itself — but there is an annotation called @KafkaHandler in Spring Kafka, which is used in a specific scenario:
+
+
+---
+
+@KafkaHandler (in Spring Kafka)
+
+It's used along with @KafkaListener on a class to support multiple methods for handling different message types within a class-level message listener.
+
+Example:
+
+@KafkaListener(id = "multiHandler", topics = "my-topic")
+public class MultiTypeMessageHandler {
+
+    @KafkaHandler
+    public void handleString(String message) {
+        System.out.println("String message: " + message);
+    }
+
+    @KafkaHandler
+    public void handleInteger(Integer number) {
+        System.out.println("Integer message: " + number);
+    }
+
+    @KafkaHandler(isDefault = true)
+    public void defaultHandler(Object unknown) {
+        System.out.println("Unknown message type: " + unknown);
+    }
+}
+
+This allows you to handle different payload types in the same class.
+
+One method can be marked with @KafkaHandler(isDefault = true) to handle all unmatched types.
+
+
+
+---
+
+When to Use @KafkaHandler?
+
+When your Kafka consumer needs to process multiple message types in a single class.
+
+Common in message-driven polymorphic handling scenarios.
+
+
+
+---
+
+Let me know if you're using plain Kafka Java clients or Spring Kafka — I can tailor examples accordingly.
+
