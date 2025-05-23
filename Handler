@@ -90,7 +90,5 @@ Common in message-driven polymorphic handling scenarios.
 
 
 
----
 
-Let me know if you're using plain Kafka Java clients or Spring Kafka — I can tailor examples accordingly.
 
