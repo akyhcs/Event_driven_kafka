@@ -1,0 +1,71 @@
+Yes — KafkaTemplate can play a role on the consumer side, but only in specific cases like error handling, retries, 
+or forwarding messages to a Dead Letter Topic (DLT).
+
+
+---
+
+Normally:
+
+KafkaTemplate is used on the producer side to send messages.
+
+
+
+---
+
+On the consumer side, it is used only if:
+
+1. You are using **DeadLetterPublishingRecoverer** in your error handler.
+
+
+2. You want to manually re-publish failed or transformed messages to another topic.
+
+
+
+
+---
+
+Example Use in Consumer Side (with Error Handler)
+
+@Bean
+public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
+        ConsumerFactory<String, String> consumerFactory,
+        KafkaTemplate<String, String> kafkaTemplate) {
+
+    ConcurrentKafkaListenerContainerFactory<String, String> factory =
+            new ConcurrentKafkaListenerContainerFactory<>();
+
+    factory.setConsumerFactory(consumerFactory);
+
+    // KafkaTemplate is needed here to publish to DLT
+    factory.setCommonErrorHandler(new DefaultErrorHandler(
+        new DeadLetterPublishingRecoverer(kafkaTemplate), 
+        new FixedBackOff(1000L, 2))
+    );
+
+    return factory;
+}
+
+
+---
+
+When KafkaTemplate is not needed on the consumer side:
+
+If you are just consuming and processing messages without custom error routing.
+
+If you’re not publishing or forwarding anything from the consumer.
+
+
+
+---
+
+Summary:
+
+Use Case	KafkaTemplate Needed on Consumer Side?
+
+Simple message consumption	No
+Error recovery with DLT (Spring Kafka)	Yes
+Manual retry/publish to other topic	Yes
+
+
+Let me know if you want to see a case where the consumer republish a modified message using KafkaTemplate.
+
