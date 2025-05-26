@@ -1,0 +1,93 @@
+In Apache Kafka, handling consumer exceptions and retries is crucial for ensuring data integrity and fault tolerance.
+Here's a breakdown of how it works and how to manage it effectively in a Spring Boot application using Spring Kafka:
+
+
+---
+
+1. Default Behavior
+
+If a Kafka consumer throws an exception during message processing:
+
+The message is not acknowledged.
+
+The consumer keeps retrying the same message indefinitely (unless configured otherwise).
+
+This can lead to a "poison pill" problem (stuck processing).
+
+
+
+---
+
+2. Retry Mechanisms in Spring Kafka
+
+a. Automatic Retries (Default Retry)
+
+By default, Spring Kafka retries 10 times (configurable):
+
+spring.kafka.listener.concurrency=3
+spring.kafka.listener.ack-mode=record
+spring.kafka.listener.retry.interval=1000
+
+b. Custom Error Handler
+
+Use DefaultErrorHandler for more control (replaces SeekToCurrentErrorHandler from Spring Kafka 3.x onward):
+
+@Bean
+public DefaultErrorHandler errorHandler() {
+    // Retry 3 times, then send to DLT
+    FixedBackOff backOff = new FixedBackOff(1000L, 3);
+    DefaultErrorHandler handler = new DefaultErrorHandler(backOff);
+    handler.addNotRetryableExceptions(IllegalArgumentException.class); // optional
+    return handler;
+}
+
+c. Configure Listener with Error Handler
+
+@Bean
+public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
+        ConsumerFactory<String, String> consumerFactory,
+        DefaultErrorHandler errorHandler) {
+
+    ConcurrentKafkaListenerContainerFactory<String, String> factory =
+            new ConcurrentKafkaListenerContainerFactory<>();
+    factory.setConsumerFactory(consumerFactory);
+    factory.setCommonErrorHandler(errorHandler);
+    return factory;
+}
+
+
+---
+
+3. Dead Letter Topic (DLT)
+
+If retries are exhausted, you can forward the failed message to a Dead Letter Topic:
+
+handler.setDeadLetterPublishingRecoverer(new DeadLetterPublishingRecoverer(kafkaTemplate));
+
+Kafka will publish the failed record to a DLT with the format: <original-topic-name>.DLT.
+
+
+---
+
+4. Manual Retry with @Retryable (optional)
+
+For fine-grained control inside the consumer method:
+
+@Retryable(maxAttempts = 3, backoff = @Backoff(delay = 1000))
+@KafkaListener(topics = "my-topic")
+public void listen(String message) {
+    // process message
+}
+
+
+---
+
+5. Idempotency
+
+Always design consumer logic to be idempotent to avoid data corruption on retries.
+
+
+---
+
+Let me know if you want full example code with producer, consumer, retry, and DLT setup.
+
