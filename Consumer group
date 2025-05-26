@@ -1,0 +1,114 @@
+In Kafka, multiple consumers in a consumer group are used to parallelize message processing and provide scalability.
+Here’s a detailed breakdown:
+
+
+---
+
+1. Key Concepts
+
+Consumer Group
+
+A consumer group is a set of consumers that share the workload of consuming messages from a topic.
+
+Each message from a partition is delivered to only one consumer in the group.
+
+Parallelism is limited by the number of partitions — only one consumer per partition.
+
+
+
+---
+
+2. One Topic, Multiple Partitions
+
+Suppose you have:
+
+Topic: orders
+
+Partitions: 3
+
+Consumer Group: order-group
+
+Consumers: C1, C2, C3
+
+
+Kafka will assign:
+
+One partition to one consumer.
+
+If more consumers than partitions, extra consumers will be idle.
+
+
+
+---
+
+3. Spring Boot Example: Multiple Consumers in a Group
+
+a. application.yml
+
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: my-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+
+b. Kafka Consumer Class
+
+@Component
+public class OrderConsumer {
+
+    @KafkaListener(topics = "orders", groupId = "my-group", concurrency = "3")
+    public void consume(String message) {
+        System.out.println("Thread: " + Thread.currentThread().getName() + " | Message: " + message);
+    }
+}
+
+concurrency = "3" will spin up 3 consumer threads under my-group.
+
+Make sure topic has at least 3 partitions for this to be effective.
+
+
+
+---
+
+4. KafkaListener Container Factory (for concurrency)
+
+@Bean
+public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
+        ConsumerFactory<String, String> consumerFactory) {
+    ConcurrentKafkaListenerContainerFactory<String, String> factory =
+            new ConcurrentKafkaListenerContainerFactory<>();
+    factory.setConsumerFactory(consumerFactory);
+    factory.setConcurrency(3); // Number of threads/consumers
+    return factory;
+}
+
+
+---
+
+5. Benefits of Multiple Consumers
+
+Improves throughput.
+
+Fault tolerance: if one consumer goes down, others take over.
+
+Enables parallel processing of Kafka topic data.
+
+
+
+---
+
+6. Important Notes
+
+Number of consumers in a group should not exceed number of partitions.
+
+Each consumer handles only messages from its assigned partition(s).
+
+
+
+---
+
+
+
