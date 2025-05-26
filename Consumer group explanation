@@ -1,0 +1,118 @@
+Great observation — let's clarify:
+
+When you use concurrency = 3 in Spring Kafka:
+
+You're not creating one consumer that processes in parallel.
+
+You're actually creating three separate consumer instances (threads) under the same consumer group.
+
+
+Each of these consumers:
+
+Acts independently.
+
+Gets assigned one or more partitions (depending on how many partitions your topic has).
+
+Consumes messages in parallel, each from its assigned partition(s).
+
+
+
+---
+
+Analogy
+
+Think of concurrency = 3 like spinning up 3 worker threads, each behaving like its own Kafka consumer,
+but all sharing the same group ID, so Kafka assigns them partitions without overlap.
+
+
+---
+
+Summary
+
+Setting	Behavior
+
+concurrency = 1 (default)	1 consumer thread → processes messages serially
+concurrency = N	N consumer threads → each consumes different partitions in parallel
+Same group ID	Kafka ensures each partition is processed by only one of the consumers
+
+Excellent question.
+
+In Spring Kafka, when you set concurrency = 3, here’s what happens under the hood:
+
+1. KafkaListener Container Factory
+
+You configure:
+
+factory.setConcurrency(3);
+
+This tells Spring to spin up 3 Kafka consumer threads, each an independent consumer instance under the same consumer group.
+
+
+---
+
+2. Partition Assignment Logic
+
+Kafka (not Spring) is responsible for assigning partitions to consumer instances.
+
+Let's break it down with an example:
+
+Example:
+
+Topic: orders
+
+Partitions: 4 → P0, P1, P2, P3
+
+Group ID: my-group
+
+Concurrency: 3 → Spring creates C1, C2, C3 (in one app instance)
+
+
+Kafka assigns partitions:
+
+It might assign like this:
+
+C1 → P0, P1
+
+C2 → P2
+
+C3 → P3
+
+
+So each consumer thread processes only its assigned partition(s), and Spring handles the thread management.
+
+
+---
+
+How does Spring know which thread handles which partition?
+
+Spring does not decide partition assignment.
+
+Kafka’s coordinator assigns partitions to the consumer instances (based on group ID and active consumers).
+
+Spring Kafka just starts N consumers using the same ConsumerFactory and lets Kafka assign partitions during rebalancing.
+
+
+
+---
+
+Summary Table
+
+Partitions	Concurrency	Result
+
+3	3	3 consumers each get 1 partition
+4	3	One consumer gets 2 partitions
+3	5	Only 3 consumers get assigned, 2 are idle
+1	3	1 active consumer, 2 idle
+
+
+
+---
+
+If you want to explicitly assign partitions, you can also use @KafkaListener(topicPartitions = ...)
+but then you must manage it manually, which is not dynamic.
+
+Would you like that example too?
+
+
+
+
