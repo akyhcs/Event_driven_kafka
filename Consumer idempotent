@@ -1,0 +1,111 @@
+Kafka Consumer Idempotency Explained
+
+Idempotency means:
+
+> Processing the same message more than once has the same effect as processing it once.
+
+
+
+In Kafka, consumers can receive the same message multiple times due to:
+
+retries
+
+failures
+
+rebalance or restarts
+
+manual offset management
+
+
+
+---
+
+Why Idempotency is Important for Consumers
+
+If your consumer writes to:
+
+a database
+
+a cache
+
+external systems
+
+
+...you must ensure duplicate messages don’t corrupt data or create duplicates.
+
+
+---
+
+How to Make a Kafka Consumer Idempotent
+
+1. Use Message Keys or Unique Identifiers
+
+Ensure each message has a unique ID (e.g., transactionId, eventId).
+
+2. Check Before Processing
+
+Store a log of processed IDs (in DB, Redis, etc.):
+
+if (alreadyProcessed(message.getId())) {
+    return; // skip duplicate
+}
+process(message);
+markAsProcessed(message.getId());
+
+3. Use UPSERT instead of INSERT
+
+If saving to a DB:
+
+Use INSERT ON CONFLICT DO NOTHING or UPSERT (Postgres, MySQL, etc.)
+
+This avoids duplicates if message already exists
+
+
+4. Idempotent Writes to External APIs
+
+Design logic so writing again has no side effects.
+
+
+---
+
+Spring Kafka Example: Idempotent Consumer
+
+@KafkaListener(topics = "payments")
+public void process(PaymentEvent event) {
+    if (repository.existsByTransactionId(event.getTxId())) {
+        System.out.println("Duplicate, skipping: " + event.getTxId());
+        return;
+    }
+
+    // Process payment
+    repository.save(event); // safely insert if not processed
+}
+
+
+---
+
+Optional: Exactly Once Semantics (EOS)
+
+Kafka supports Exactly Once but only for producers, not consumers, unless:
+
+You use Kafka Streams
+
+Or manage consumer offset transactions manually with external DB — complex!
+
+
+
+---
+
+Key Takeaways
+
+Kafka consumers can see duplicate messages — idempotency is essential
+
+Track messageId or eventId
+
+Avoid non-idempotent operations (like blind inserts)
+
+Use upserts or conditional logic in your sink system
+
+
+Would you like help implementing this with a database or cache?
+
