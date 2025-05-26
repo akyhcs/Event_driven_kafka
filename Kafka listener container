@@ -1,4 +1,5 @@
-In Spring Boot, a Kafka listener container factory is responsible for creating Kafka listener containers that handle incoming messages. You define it as a bean so Spring Kafka can use it for @KafkaListener annotations.
+In Spring Boot, a Kafka listener container factory is responsible for creating Kafka listener containers that handle incoming messages.
+You define it as a bean so Spring Kafka can use it for @KafkaListener annotations.
 
 Here’s a standard example for a ConcurrentKafkaListenerContainerFactory bean:
 
