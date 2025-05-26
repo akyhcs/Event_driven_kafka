@@ -63,6 +63,124 @@ Enables retries after fixes
 
 Prevents data loss
 
+*********************************************
+Here’s a complete end-to-end working example of a Kafka setup in Spring Boot using a Dead Letter Topic (DLT):
+
+
+---
+
+1. Maven Dependencies
+
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.kafka</groupId>
+        <artifactId>spring-kafka</artifactId>
+    </dependency>
+</dependencies>
+
+
+---
+
+2. Kafka Configuration
+
+@Configuration
+public class KafkaConfig {
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
+            ConsumerFactory<String, String> consumerFactory,
+            KafkaTemplate<String, String> kafkaTemplate) {
+
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+
+        factory.setConsumerFactory(consumerFactory);
+
+        factory.setCommonErrorHandler(new DefaultErrorHandler(
+                new DeadLetterPublishingRecoverer(kafkaTemplate),
+                new FixedBackOff(1000L, 2))); // Retry twice, then send to DLT
+
+        return factory;
+    }
+}
+
+
+---
+
+3. Kafka Listener (Consumer)
+
+@Component
+public class MessageListener {
+
+    @KafkaListener(topics = "my-topic", groupId = "my-group")
+    public void listen(String message) {
+        System.out.println("Received: " + message);
+
+        // Simulate failure for specific message
+        if (message.contains("fail")) {
+            throw new RuntimeException("Processing failed for message: " + message);
+        }
+    }
+}
+
+
+---
+
+4. Kafka Producer
+
+@RestController
+@RequestMapping("/kafka")
+public class MessageProducer {
+
+    @Autowired
+    private KafkaTemplate<String, String> kafkaTemplate;
+
+    @PostMapping("/send")
+    public String sendMessage(@RequestParam String msg) {
+        kafkaTemplate.send("my-topic", msg);
+        return "Sent: " + msg;
+    }
+}
+
+
+---
+
+5. Dead Letter Topic Listener (Optional for Debugging)
+
+@Component
+public class DeadLetterListener {
+
+    @KafkaListener(topics = "my-topic.DLT", groupId = "dlt-group")
+    public void handleDLT(String message) {
+        System.out.println("DLT received: " + message);
+    }
+}
+
+
+---
+
+6. Create Topics (CLI or Admin Tool)
+
+kafka-topics.sh --create --topic my-topic --bootstrap-server localhost:9092
+kafka-topics.sh --create --topic my-topic.DLT --bootstrap-server localhost:9092
+
+
+---
+
+Usage
+
+Send a message using:
+
+curl -X POST "http://localhost:8080/kafka/send?msg=hello"
+curl -X POST "http://localhost:8080/kafka/send?msg=fail_this"
+
+The first message is processed normally.
+
+The second will fail, retry 2 times, then land in my-topic.DLT.
+
+
+
+
 
 
 
