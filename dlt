@@ -1,4 +1,6 @@
-A Dead Letter Topic (DLT) in Kafka is used to handle messages that cannot be processed successfully by consumers. Instead of losing such problematic messages, they are redirected to a special Kafka topic (the DLT) for later analysis, debugging, or reprocessing.
+A Dead Letter Topic (DLT) in Kafka is used to handle messages that cannot be processed successfully by consumers.
+Instead of losing such problematic messages, they are redirected to a special Kafka topic (the DLT) for later analysis, debugging,
+or reprocessing.
 
 When to Use a Dead Letter Topic
 
@@ -190,7 +192,8 @@ The Dead Letter Topic (DLT) Listener is a consumer-side configuration, not produ
 
 Why?
 
-The DLT is used when a consumer fails to process a message. After retrying (if configured), Kafka or the framework (like Spring Kafka) sends the failed message to a DLT. To monitor or debug these failures, you need another consumer to read from the DLT.
+The DLT is used when a consumer fails to process a message. After retrying (if configured), Kafka or the framework (like Spring Kafka) 
+sends the failed message to a DLT. To monitor or debug these failures, you need another consumer to read from the DLT.
 
 
 ---
