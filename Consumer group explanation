@@ -110,9 +110,3 @@ Partitions	Concurrency	Result
 
 If you want to explicitly assign partitions, you can also use @KafkaListener(topicPartitions = ...)
 but then you must manage it manually, which is not dynamic.
-
-Would you like that example too?
-
-
-
-
