@@ -1,0 +1,68 @@
+A Dead Letter Topic (DLT) in Kafka is used to handle messages that cannot be processed successfully by consumers. Instead of losing such problematic messages, they are redirected to a special Kafka topic (the DLT) for later analysis, debugging, or reprocessing.
+
+When to Use a Dead Letter Topic
+
+Deserialization failures
+
+Business logic errors
+
+Data format issues
+
+Schema mismatches
+
+
+
+---
+
+How It Works (Spring Kafka Example)
+
+1. Consumer Configuration with Error Handling
+
+@Bean
+public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
+        ConsumerFactory<String, String> consumerFactory,
+        KafkaTemplate<String, String> kafkaTemplate) {
+
+    ConcurrentKafkaListenerContainerFactory<String, String> factory =
+            new ConcurrentKafkaListenerContainerFactory<>();
+
+    factory.setConsumerFactory(consumerFactory);
+
+    // Error handler to send to DLT
+    factory.setErrorHandler(new DeadLetterPublishingRecoverer(kafkaTemplate),
+            new FixedBackOff(1000L, 2)); // Retry twice before sending to DLT
+
+    return factory;
+}
+
+2. Kafka Listener
+
+@KafkaListener(topics = "main-topic", groupId = "my-group")
+public void listen(String message) {
+    // Business logic that might throw an exception
+}
+
+3. Dead Letter Topic Naming Convention
+
+By default, Spring Kafka names the DLT as:
+
+<original-topic-name>.DLT
+
+E.g., for main-topic, it will be main-topic.DLT.
+
+
+---
+
+Benefits of Using DLT
+
+Keeps the main topic clean and fast
+
+Allows better monitoring and alerting
+
+Enables retries after fixes
+
+Prevents data loss
+
+
+
+
