@@ -179,6 +179,49 @@ The first message is processed normally.
 The second will fail, retry 2 times, then land in my-topic.DLT.
 
 
+********************************
+
+Great question!
+
+The Dead Letter Topic (DLT) Listener is a consumer-side configuration, not producer-side.
+
+
+---
+
+Why?
+
+The DLT is used when a consumer fails to process a message. After retrying (if configured), Kafka or the framework (like Spring Kafka) sends the failed message to a DLT. To monitor or debug these failures, you need another consumer to read from the DLT.
+
+
+---
+
+Where to configure what:
+
+Component	Configuration Side	Purpose
+
+Dead Letter Topic Listener	Consumer side	To consume and debug failed messages
+DLT error handler (recoverer)	Consumer side	Tells Kafka what to do on failure (send to DLT)
+Producer config	Producer side	Optional; doesn't need to know about DLT
+
+
+
+---
+
+Example Summary
+
+Your main consumer listens to my-topic.
+
+You configure error handling (e.g. DeadLetterPublishingRecoverer) in the consumer factory.
+
+If a message fails, it's sent to my-topic.DLT.
+
+You set up a separate listener (consumer) for my-topic.DLT to log/debug/retry.
+
+
+
+---
+
+
 
 
 
