@@ -1,0 +1,189 @@
+Here’s the complete working code to implement Kafka retries with Dead Letter Topic (DLT) using Spring Boot and Spring Kafka.
+
+
+---
+
+1. Project Setup
+
+Maven Dependencies (pom.xml)
+
+<dependencies>
+    <dependency>
+        <groupId>org.springframework.kafka</groupId>
+        <artifactId>spring-kafka</artifactId>
+    </dependency>
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter</artifactId>
+    </dependency>
+</dependencies>
+
+
+---
+
+2. Configuration
+
+application.yml
+
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: test-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+
+---
+
+3. Kafka Producer
+
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.stereotype.Service;
+
+@Service
+public class MyProducer {
+
+    private final KafkaTemplate<String, String> kafkaTemplate;
+
+    public MyProducer(KafkaTemplate<String, String> kafkaTemplate) {
+        this.kafkaTemplate = kafkaTemplate;
+    }
+
+    public void send(String msg) {
+        kafkaTemplate.send("my-topic", msg);
+    }
+}
+
+
+---
+
+4. Kafka Consumer
+
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
+@Component
+public class MyConsumer {
+
+    @KafkaListener(topics = "my-topic", groupId = "test-group")
+    public void listen(String msg) {
+        System.out.println("Received: " + msg);
+        if (msg.contains("fail")) {
+            throw new RuntimeException("Simulated failure");
+        }
+    }
+}
+
+
+---
+
+5. Error Handler Configuration with DLT
+
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.core.ConsumerFactory;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.listener.DeadLetterPublishingRecoverer;
+import org.springframework.kafka.listener.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.util.backoff.FixedBackOff;
+
+@Configuration
+public class KafkaConfig {
+
+    @Bean
+    public DefaultErrorHandler errorHandler(KafkaTemplate<Object, Object> kafkaTemplate) {
+        // Retry twice with 2 seconds delay
+        FixedBackOff fixedBackOff = new FixedBackOff(2000L, 2);
+
+        // Publish failed messages to Dead Letter Topic
+        DeadLetterPublishingRecoverer recoverer = new DeadLetterPublishingRecoverer(kafkaTemplate,
+            (record, ex) -> new org.apache.kafka.common.TopicPartition(record.topic() + ".DLT", record.partition()));
+
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(recoverer, fixedBackOff);
+        return errorHandler;
+    }
+
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory(
+            ConsumerFactory<String, String> consumerFactory,
+            DefaultErrorHandler errorHandler) {
+
+        ConcurrentKafkaListenerContainerFactory<String, String> factory =
+                new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory);
+        factory.setCommonErrorHandler(errorHandler);
+        return factory;
+    }
+}
+
+
+---
+
+6. DLT Listener (Optional)
+
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.stereotype.Component;
+
+@Component
+public class DltConsumer {
+
+    @KafkaListener(topics = "my-topic.DLT", groupId = "test-group")
+    public void handleDLT(String msg) {
+        System.out.println("DLT Received: " + msg);
+    }
+}
+
+
+---
+
+7. REST Controller to Trigger Messages
+
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/kafka")
+public class KafkaController {
+
+    private final MyProducer producer;
+
+    public KafkaController(MyProducer producer) {
+        this.producer = producer;
+    }
+
+    @PostMapping("/send/{msg}")
+    public String send(@PathVariable String msg) {
+        producer.send(msg);
+        return "Sent: " + msg;
+    }
+}
+
+
+---
+
+Test the Flow
+
+Run your Spring Boot app.
+
+Start Kafka locally (e.g., using Docker or local install).
+
+Send test messages:
+
+
+curl -X POST http://localhost:8080/kafka/send/hello
+curl -X POST http://localhost:8080/kafka/send/fail_test
+
+fail_test will retry 2 times, then land in my-topic.DLT.
+
+
+
+---
+
+Let me know if you want a GitHub repo or Docker setup too.
+
